@@ -97,20 +97,19 @@ oled_init_kb(oled_rotation_t rotation) {
     return rotation;
 }
 
-static const char basic_codes_to_name[57] = { ' ', ' ',  ' ', ' ', 'a',  'b', 'c', 'd', 'e', 'f', 'g', 'h',
-                                              'i', 'j',  'k', 'l', 'm',  'n', 'o', 'p', 'q', 'r', 's', 't',
-                                              'u', 'v',  'w', 'x', 'y',  'z', '1', '2', '3', '4', '5', '6',
-                                              '7', '8',  '9', '0', 'R',  'E', 'B', 'T', '_', '-', '=', '[',
-                                              ']', '\\', '#', ';', '\'', '`', ',', '.', '/' };
+static const char* basic_codes_to_name[57] = {
+    " ", " ", " ",     " ",   "a",    "b",   "c", "d", "e", "f", "g", "h",  "i", "j", "k",  "l", "m", "n", "o",
+    "p", "q", "r",     "s",   "t",    "u",   "v", "w", "x", "y", "z", "1",  "2", "3", "4",  "5", "6", "7", "8",
+    "9", "0", "Enter", "Esc", "Bksp", "Tab", "_", "-", "=", "[", "]", "\\", "#", ";", "\"", "`", ",", ".", "/"
+};
 
 static const char*
 keycode_string(uint16_t keycode) {
-    char* keycode_str;
-    static char key;
+    static const char* keycode_str;
     switch (keycode) {
         case 0 ... 56:
-            key = pgm_read_byte(&basic_codes_to_name[keycode]);
-            return &key;
+            keycode_str = basic_codes_to_name[keycode];
+            break;
         case KC_CAPS:
             keycode_str = "Caps";
             break;
@@ -146,6 +145,22 @@ keycode_string(uint16_t keycode) {
             break;
         case KC_MPLY:
             keycode_str = "Play";
+            break;
+        case KC_LCTL:
+        case KC_RCTL:
+            keycode_str = "Ctrl";
+            break;
+        case KC_LSFT:
+        case KC_RSFT:
+            keycode_str = "Shift";
+            break;
+        case KC_LALT:
+        case KC_RALT:
+            keycode_str = "Alt";
+            break;
+        case KC_LGUI:
+        case KC_RGUI:
+            keycode_str = "Super";
             break;
         case QK_MODS ... QK_MODS_MAX:
             keycode_str = "MOD()";
@@ -265,7 +280,8 @@ layer_string(uint32_t layer) {
             layer_str = "Seven";
             break;
         default:
-            return get_u16_str(layer, ' ');
+            layer_str = "Undef";
+            break;
     }
 
     return layer_str;
@@ -299,17 +315,11 @@ process_detected_host_os_kb(os_variant_t detected_os) {
     return true;
 }
 
-layer_state_t
-layer_state_set_kb(layer_state_t state) {
-    state = layer_state_set_user(state);
-    oled_set_cursor(0, 2);
-    oled_write_ln(layer_string(get_highest_layer(state)), false);
-    return state;
-}
-
 bool
 process_record_kb(uint16_t keycode, keyrecord_t* record) {
-    current_keycode = keycode;
+    if (record->event.pressed) {
+        current_keycode = keycode;
+    }
     return process_record_user(keycode, record);
 };
 
@@ -369,14 +379,11 @@ oled_task_kb(void) {
     static bool oled_slave_init_done = false;
 
     if (is_keyboard_master()) {
+        oled_set_cursor(0, 2);
+        oled_write_ln(layer_string(get_highest_layer(layer_state)), false);
         if (last_keycode != current_keycode) {
             oled_set_cursor(0, 6);
-            if (current_keycode < ARRAY_SIZE(basic_codes_to_name)) {
-                oled_write_char(basic_codes_to_name[current_keycode], false);
-                oled_advance_page(true);
-            } else {
-                oled_write_ln(keycode_string(current_keycode), false);
-            }
+            oled_write_ln(keycode_string(current_keycode), false);
             last_keycode = current_keycode;
         }
     } else {
