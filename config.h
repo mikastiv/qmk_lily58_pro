@@ -1,1 +1,8 @@
 #pragma once
+
+#define MASTER_LEFT
+
+#ifdef RGB_MATRIX_ENABLE
+    #define ENABLE_RGB_MATRIX_SOLID_COLOR
+    #define RGB_MATRIX_DEFAULT_MODE RGB_MATRIX_SOLID_COLOR
+#endif
